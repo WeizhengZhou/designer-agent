@@ -92,11 +92,41 @@ def _map_product(r: dict) -> Product:
     )
 
 
+import logging
+import json
+
+# ── Configure Logger ──────────────────────────────────────────────────────────
+logging.basicConfig(
+    filename='product_search.log',
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+CACHE_FILE = "search_cache.json"
+
 # ── Service ───────────────────────────────────────────────────────────────────
 
 class ProductService:
     def __init__(self):
         self._api_key = os.environ.get("SERPAPI_KEY", "")
+        self._cache = self._load_cache()
+
+    def _load_cache(self) -> dict:
+        if os.path.exists(CACHE_FILE):
+            try:
+                with open(CACHE_FILE, "r") as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.error(f"Failed to load cache: {e}")
+        return {}
+
+    def _save_cache(self):
+        try:
+            with open(CACHE_FILE, "w") as f:
+                json.dump(self._cache, f)
+        except Exception as e:
+            logger.error(f"Failed to save cache: {e}")
 
     async def search(
         self,
@@ -120,6 +150,21 @@ class ProductService:
         parts.append(query)
         search_q = " ".join(parts)
 
+        # Build cache key
+        cache_key = json.dumps({
+            "q": search_q,
+            "max": max_price,
+            "limit": limit
+        }, sort_keys=True)
+
+        if cache_key in self._cache:
+            logger.info(f"Cache hit for query: '{search_q}' (limit: {limit})")
+            cached_data = self._cache[cache_key]
+            # Must deserialize back into Product objects
+            return [Product(**p) for p in cached_data]
+
+        logger.info(f"Cache miss for query: '{search_q}' (limit: {limit}). Calling SerpAPI...")
+
         params: dict = {
             "engine":  "google_shopping",
             "q":       search_q,
@@ -134,8 +179,17 @@ class ProductService:
         try:
             from serpapi import GoogleSearch
             results = await asyncio.to_thread(self._run_search, params)
-            return [_map_product(r) for r in results[:limit]]
+            products = [_map_product(r) for r in results[:limit]]
+            
+            # Save to cache
+            self._cache[cache_key] = [p.model_dump() for p in products]
+            # Fire-and-forget save to disk
+            asyncio.create_task(asyncio.to_thread(self._save_cache))
+            
+            logger.info(f"Successfully fetched and cached {len(products)} products for '{search_q}'")
+            return products
         except Exception as e:
+            logger.error(f"SerpAPI error: {e}")
             print(f"[ProductService] SerpAPI error: {e}")
             return []
 

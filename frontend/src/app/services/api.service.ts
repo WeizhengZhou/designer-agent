@@ -164,6 +164,11 @@ export class ApiService implements OnDestroy {
     return this.http.post<Product[]>(`${API_URL}/products/search`, { query, ...options });
   }
 
+  generateImageFromPlan(furniture_items: { title: string, image_url: string }[]) {
+    return this.http.post<{ image: string, mime_type: string }>(`${API_URL}/images/generate-from-plan`, { furniture_items });
+  }
+
+
   ngOnDestroy() {
     this.ws?.close();
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);

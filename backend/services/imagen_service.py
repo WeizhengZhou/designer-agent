@@ -19,6 +19,7 @@ model ID once confirmed.
 import os
 import asyncio
 import base64
+from typing import Any
 
 from google import genai
 from google.genai import types
@@ -54,4 +55,60 @@ class ImagenService:
                     return base64.b64encode(part.inline_data.data).decode("utf-8")
         except Exception as e:
             print(f"[ImagenService] Image generation failed: {e}")
+        return None
+
+    async def generate_3d_visualization(self, furniture_items: list[Any]) -> str | None:
+        """
+        Generate a 3D visualization of a room containing specific furniture using nano banana pro.
+        Returns a base64-encoded PNG string, or None on failure.
+        """
+        import httpx
+        from google.genai import types
+
+        prompt_parts: list[types.Part] = []
+
+        items_desc = []
+        
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+            for item in furniture_items:
+                title = item.title
+                url = item.image_url
+                items_desc.append(title)
+                try:
+                    # Some images in dummy data or SerpAPI might need proxy but here we just fetch directly
+                    if url.startswith("http"):
+                        resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+                        if resp.status_code == 200:
+                            content_type = resp.headers.get("content-type", "image/jpeg")
+                            prompt_parts.append(
+                                types.Part.from_bytes(data=resp.content, mime_type=content_type)
+                            )
+                except Exception as e:
+                    print(f"Failed to fetch image for {title}: {e}")
+                    
+        items_str = ", ".join(items_desc)
+        full_prompt = (
+            "Create a highly realistic, photorealistic 3D interior design visualization of a beautifully styled room "
+            "containing the following furniture pieces: " + items_str + ". "
+            "I have provided reference images of the exact furniture pieces I want you to include. "
+            "Ensure the lighting is natural, the textures are lifelike, and the composition looks like high-end architectural photography."
+        )
+        
+        prompt_parts.append(types.Part.from_text(text=full_prompt))
+
+        try:
+            # Using the Pro Nano Banana model: gemini-3-pro-image-preview
+            response = await asyncio.to_thread(
+                self._client.models.generate_content,
+                model="gemini-3-pro-image-preview",
+                contents=prompt_parts,
+                config=types.GenerateContentConfig(
+                    response_modalities=["IMAGE"],
+                ),
+            )
+            for part in response.candidates[0].content.parts:
+                if part.inline_data and part.inline_data.mime_type.startswith("image/"):
+                    return base64.b64encode(part.inline_data.data).decode("utf-8")
+        except Exception as e:
+            print(f"[ImagenService] Nano Banana Pro image generation failed: {e}")
         return None

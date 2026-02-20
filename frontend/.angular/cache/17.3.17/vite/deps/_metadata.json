@@ -1,79 +1,79 @@
 {
-  "hash": "5b23a89b",
-  "configHash": "dd53f8bd",
+  "hash": "ab3d1169",
+  "configHash": "98eaff8b",
   "lockfileHash": "9e4803f2",
-  "browserHash": "003ffb4f",
+  "browserHash": "d7bc08ee",
   "optimized": {
     "@angular/common": {
       "src": "../../../../../node_modules/@angular/common/fesm2022/common.mjs",
       "file": "@angular_common.js",
-      "fileHash": "0bf1a5b3",
+      "fileHash": "14defb32",
       "needsInterop": false
     },
     "@angular/common/http": {
       "src": "../../../../../node_modules/@angular/common/fesm2022/http.mjs",
       "file": "@angular_common_http.js",
-      "fileHash": "4edde4ab",
+      "fileHash": "03a0091e",
       "needsInterop": false
     },
     "@angular/core": {
       "src": "../../../../../node_modules/@angular/core/fesm2022/core.mjs",
       "file": "@angular_core.js",
-      "fileHash": "64626366",
+      "fileHash": "3adef831",
       "needsInterop": false
     },
     "@angular/forms": {
       "src": "../../../../../node_modules/@angular/forms/fesm2022/forms.mjs",
       "file": "@angular_forms.js",
-      "fileHash": "f6264b27",
+      "fileHash": "bab06f97",
       "needsInterop": false
     },
     "@angular/platform-browser": {
       "src": "../../../../../node_modules/@angular/platform-browser/fesm2022/platform-browser.mjs",
       "file": "@angular_platform-browser.js",
-      "fileHash": "9188a65d",
+      "fileHash": "e1f5eced",
       "needsInterop": false
     },
     "@angular/platform-browser/animations": {
       "src": "../../../../../node_modules/@angular/platform-browser/fesm2022/animations.mjs",
       "file": "@angular_platform-browser_animations.js",
-      "fileHash": "abe3a304",
+      "fileHash": "37cc5b6e",
       "needsInterop": false
     },
     "rxjs": {
       "src": "../../../../../node_modules/rxjs/dist/esm5/index.js",
       "file": "rxjs.js",
-      "fileHash": "0b5ca2ed",
+      "fileHash": "6c93a9d7",
       "needsInterop": false
     },
     "three": {
       "src": "../../../../../node_modules/three/build/three.module.js",
       "file": "three.js",
-      "fileHash": "8df82890",
+      "fileHash": "549b2cd1",
       "needsInterop": false
     },
     "three/addons/controls/OrbitControls.js": {
       "src": "../../../../../node_modules/three/examples/jsm/controls/OrbitControls.js",
       "file": "three_addons_controls_OrbitControls__js.js",
-      "fileHash": "b92018f0",
+      "fileHash": "15fb2240",
       "needsInterop": false
     },
     "three/addons/controls/TransformControls.js": {
       "src": "../../../../../node_modules/three/examples/jsm/controls/TransformControls.js",
       "file": "three_addons_controls_TransformControls__js.js",
-      "fileHash": "3fde3258",
+      "fileHash": "e2e9797d",
       "needsInterop": false
     }
   },
   "chunks": {
-    "chunk-XKSJE7Y7": {
-      "file": "chunk-XKSJE7Y7.js"
-    },
     "chunk-FPUYUH6A": {
       "file": "chunk-FPUYUH6A.js"
     },
     "chunk-TGVFEQZS": {
       "file": "chunk-TGVFEQZS.js"
+    },
+    "chunk-XKSJE7Y7": {
+      "file": "chunk-XKSJE7Y7.js"
     },
     "chunk-FFY7VSBW": {
       "file": "chunk-FFY7VSBW.js"

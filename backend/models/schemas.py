@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Any
 from enum import Enum
 
 
@@ -88,3 +88,12 @@ class ImageGenerationRequest(BaseModel):
     prompt: str
     width: int = 1024
     height: int = 768
+
+
+class PlanFurnitureItem(BaseModel):
+    title: str
+    image_url: str
+
+
+class PlanImageGenerationRequest(BaseModel):
+    furniture_items: list[PlanFurnitureItem]

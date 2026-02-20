@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query
 from fastapi.responses import Response
-from models.schemas import ImageGenerationRequest
+from models.schemas import ImageGenerationRequest, PlanImageGenerationRequest
 from services.imagen_service import ImagenService
 import httpx
 
@@ -14,6 +14,15 @@ async def generate_image(req: ImageGenerationRequest):
     if not b64:
         from fastapi import HTTPException
         raise HTTPException(status_code=500, detail="Image generation failed")
+    return {"image": b64, "mime_type": "image/png"}
+
+
+@router.post("/generate-from-plan")
+async def generate_from_plan(req: PlanImageGenerationRequest):
+    b64 = await _svc.generate_3d_visualization(req.furniture_items)
+    if not b64:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail="3D image generation failed")
     return {"image": b64, "mime_type": "image/png"}
 
 

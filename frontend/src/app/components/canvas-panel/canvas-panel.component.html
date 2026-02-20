@@ -28,18 +28,42 @@
         <app-visualization-3d></app-visualization-3d>
       }
       @case ('room-images') {
-        <div class="room-images-grid">
-          @if (roomImages.length === 0) {
+        <div class="room-images-header" style="padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0;">
+          <h2 style="margin: 0; font-size: 1.125rem; font-weight: 600;">Room Visualizations</h2>
+          <button class="generate-btn" 
+                  (click)="generateImageFromPlan()" 
+                  [disabled]="isGenerating || planItemCount === 0"
+                  style="background: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+            @if (isGenerating) {
+              <span class="spinner" style="display: inline-block; width: 1rem; height: 1rem; border: 2px solid #ffffff; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></span>
+              Generating...
+            } @else {
+              <span>✨ Generate Image from Plan</span>
+            }
+          </button>
+        </div>
+        @if (planItemCount === 0 && !isGenerating && roomImages.length === 0) {
+          <div class="empty-state" style="padding: 2rem; text-align: center; color: #64748b;">
+            <p>Add some furniture to your plan first to generate an image.</p>
+          </div>
+        }
+        <div class="room-images-grid" style="padding: 1rem;">
+          @if (roomImages.length === 0 && !isGenerating) {
             <div class="empty-images">
               <div class="empty-icon">🖼️</div>
               <h3>No room images yet</h3>
-              <p>Ask the AI to visualize your room — e.g. <em>"Show me what this living room would look like"</em></p>
+              <p>Ask the AI to visualize your room — e.g. <em>"Show me what this living room would look like"</em> or click the Generate button above.</p>
             </div>
           } @else {
             @for (img of roomImages; track $index) {
               <button class="room-img-tile" (click)="lightboxIndex = $index">
                 <img [src]="'data:image/png;base64,' + img" alt="Generated room visualization {{ $index + 1 }}" />
               </button>
+            }
+            @if (isGenerating) {
+              <div class="room-img-tile loading-tile" style="display: flex; align-items: center; justify-content: center; background: #f1f5f9; border-radius: 8px; min-height: 200px;">
+                <span class="spinner" style="display: inline-block; width: 2rem; height: 2rem; border: 3px solid #cbd5e1; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></span>
+              </div>
             }
           }
         </div>

@@ -8,6 +8,7 @@ import { ProductGridComponent } from '../product-grid/product-grid.component';
 import { FloorPlanComponent } from '../floor-plan/floor-plan.component';
 import { Visualization3dComponent } from '../visualization-3d/visualization-3d.component';
 import { ProductDetailPanelComponent } from '../product-detail-panel/product-detail-panel.component';
+import { ApiService } from '../../services/api.service';
 import { PlanPanelComponent } from '../plan-panel/plan-panel.component';
 
 interface Tab { id: CanvasTab; label: string; icon: string }
@@ -32,6 +33,7 @@ export class CanvasPanelComponent implements OnInit, OnDestroy {
   roomImages: string[] = [];
   lightboxIndex: number | null = null;
   planItemCount = 0;
+  isGenerating = false;
   private sub = new Subscription();
 
   readonly tabs: Tab[] = [
@@ -45,6 +47,7 @@ export class CanvasPanelComponent implements OnInit, OnDestroy {
   constructor(
     public store: FurnitureStoreService,
     public planService: PlanService,
+    private apiService: ApiService,
   ) {}
 
   ngOnInit() {
@@ -60,4 +63,28 @@ export class CanvasPanelComponent implements OnInit, OnDestroy {
 
   setTab(tab: CanvasTab) { this.store.setActiveTab(tab); }
   closeLightbox() { this.lightboxIndex = null; }
+
+  generateImageFromPlan() {
+    const items = this.planService.currentPlan.items.map(i => ({
+      title: i.product.title,
+      image_url: i.product.images?.length > 0 ? i.product.images[0] : ""
+    })).filter(i => i.image_url !== "");
+
+    if (items.length === 0) return;
+
+    this.isGenerating = true;
+    this.sub.add(
+      this.apiService.generateImageFromPlan(items).subscribe({
+        next: (res) => {
+          this.store.addRoomImage(res.image);
+          this.isGenerating = false;
+        },
+        error: (err) => {
+          console.error("Failed to generate image from plan", err);
+          this.isGenerating = false;
+        }
+      })
+    );
+  }
 }
+
