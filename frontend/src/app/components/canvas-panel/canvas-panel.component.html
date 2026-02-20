@@ -1,0 +1,63 @@
+<div class="canvas-panel">
+  <!-- Tab bar -->
+  <nav class="tab-bar">
+    @for (tab of tabs; track tab.id) {
+      <button class="tab-btn" [class.active]="activeTab === tab.id" (click)="setTab(tab.id)">
+        <span class="tab-icon">{{ tab.icon }}</span>
+        <span class="tab-label">{{ tab.label }}</span>
+        @if (tab.id === 'plan' && planItemCount > 0) {
+          <span class="tab-badge">{{ planItemCount }}</span>
+        }
+      </button>
+    }
+  </nav>
+
+  <!-- Tab content -->
+  <div class="tab-content">
+    @switch (activeTab) {
+      @case ('products') {
+        <app-product-grid></app-product-grid>
+      }
+      @case ('plan') {
+        <app-plan-panel></app-plan-panel>
+      }
+      @case ('floor-plan') {
+        <app-floor-plan></app-floor-plan>
+      }
+      @case ('3d-view') {
+        <app-visualization-3d></app-visualization-3d>
+      }
+      @case ('room-images') {
+        <div class="room-images-grid">
+          @if (roomImages.length === 0) {
+            <div class="empty-images">
+              <div class="empty-icon">🖼️</div>
+              <h3>No room images yet</h3>
+              <p>Ask the AI to visualize your room — e.g. <em>"Show me what this living room would look like"</em></p>
+            </div>
+          } @else {
+            @for (img of roomImages; track $index) {
+              <button class="room-img-tile" (click)="lightboxIndex = $index">
+                <img [src]="'data:image/png;base64,' + img" alt="Generated room visualization {{ $index + 1 }}" />
+              </button>
+            }
+          }
+        </div>
+      }
+    }
+  </div>
+
+  <!-- Product detail slide-in -->
+  <app-product-detail-panel></app-product-detail-panel>
+
+  <!-- Lightbox for room images -->
+  @if (lightboxIndex !== null && roomImages[lightboxIndex]) {
+    <div class="lightbox-overlay" (click)="closeLightbox()">
+      <img [src]="'data:image/png;base64,' + roomImages[lightboxIndex!]"
+           alt="Room visualization"
+           class="lightbox-img"
+           (click)="$event.stopPropagation()" />
+      <button class="lightbox-close" (click)="closeLightbox()">×</button>
+    </div>
+  }
+</div>

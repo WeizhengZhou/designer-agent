@@ -1,0 +1,233 @@
+<div class="viz-root">
+
+  <!-- ── Left: Furniture catalog ─────────────────────────────────────────── -->
+  <aside class="furniture-catalog">
+    <div class="catalog-header">
+      <span class="catalog-title">Furniture</span>
+      <span class="catalog-hint">Click to add</span>
+    </div>
+    <div class="catalog-body">
+      @for (group of groupedPresets; track group.category) {
+        <div class="cat-group">
+          <p class="cat-label">{{ group.category }}</p>
+          <div class="cat-items">
+            @for (preset of group.items; track preset.type) {
+              <button class="furniture-chip" (click)="addFromPreset(preset)" [title]="preset.name">
+                <span class="chip-icon">{{ preset.icon }}</span>
+                <span class="chip-name">{{ preset.name }}</span>
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </aside>
+
+  <!-- ── Centre: Canvas ──────────────────────────────────────────────────── -->
+  <div class="canvas-area">
+    <canvas #canvas3d class="viz-canvas"></canvas>
+
+    <!-- Placed items list (mini) -->
+    @if (placedItems.length > 0) {
+      <div class="placed-list">
+        @for (item of placedItems; track item.id) {
+          <button class="placed-chip"
+                  [class.selected]="selectedItem?.id === item.id"
+                  (click)="selectItemById(item.id)">
+            {{ item.preset.icon }} {{ item.name }}
+          </button>
+        }
+      </div>
+    }
+
+    <!-- Mode toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-modes">
+        <button class="mode-btn" [class.active]="activeMode === 'translate'" (click)="setMode('translate')" title="Move (G)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/>
+            <polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/>
+            <line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/>
+          </svg>
+          Move
+        </button>
+        <button class="mode-btn" [class.active]="activeMode === 'rotate'" (click)="setMode('rotate')" title="Rotate (R)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <polyline points="1 4 1 10 7 10"/>
+            <path d="M3.51 15a9 9 0 1 0 .49-4.93"/>
+          </svg>
+          Rotate
+        </button>
+        <button class="mode-btn" [class.active]="activeMode === 'scale'" (click)="setMode('scale')" title="Scale (S)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+            <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+          </svg>
+          Scale
+        </button>
+      </div>
+      <div class="toolbar-actions">
+        <button class="action-btn" (click)="resetCamera()" title="Reset camera view">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+          </svg>
+          View
+        </button>
+        @if (placedItems.length > 0) {
+          <button class="action-btn danger" (click)="clearAll()" title="Clear all furniture">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/>
+            </svg>
+            Clear
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Keyboard shortcut hint -->
+    <div class="kbd-hints">
+      <span>G Move</span><span>R Rotate</span><span>S Scale</span>
+      <span>Shift+D Duplicate</span><span>Del Delete</span><span>Esc Deselect</span>
+    </div>
+
+    <!-- Context menu (right-click) -->
+    @if (contextMenu) {
+      <div class="context-menu"
+           [style.left.px]="contextMenu.x" [style.top.px]="contextMenu.y"
+           (click)="$event.stopPropagation()">
+        <button (click)="setMode('translate')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          Move
+        </button>
+        <button (click)="setMode('rotate')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.93"/></svg>
+          Rotate
+        </button>
+        <button (click)="setMode('scale')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><line x1="21" y1="3" x2="14" y2="10"/></svg>
+          Scale
+        </button>
+        <div class="ctx-divider"></div>
+        <button (click)="duplicateSelected(); contextMenu = null">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Duplicate
+        </button>
+        <button class="danger" (click)="removeSelected(); contextMenu = null">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+          Delete
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- ── Right: Properties panel ─────────────────────────────────────────── -->
+  <aside class="props-panel">
+    @if (selectedItem && selectedProps) {
+      <div class="props-header">
+        <span class="props-icon">{{ selectedItem.preset.icon }}</span>
+        <span class="props-title">Properties</span>
+        <button class="props-close" (click)="selectItem(null)">×</button>
+      </div>
+
+      <div class="props-body">
+        <!-- Name -->
+        <label class="prop-label">Name</label>
+        <input class="prop-input" type="text" [(ngModel)]="selectedProps.name" (change)="applyProps()" />
+
+        <!-- Position -->
+        <label class="prop-label">Position</label>
+        <div class="prop-row">
+          <div class="prop-field">
+            <span class="prop-axis x">X</span>
+            <input class="prop-input sm" type="number" step="0.5" [(ngModel)]="selectedProps.x" (change)="applyProps()" />
+          </div>
+          <div class="prop-field">
+            <span class="prop-axis z">Z</span>
+            <input class="prop-input sm" type="number" step="0.5" [(ngModel)]="selectedProps.z" (change)="applyProps()" />
+          </div>
+        </div>
+
+        <!-- Rotation -->
+        <label class="prop-label">Rotation (°)</label>
+        <div class="prop-row">
+          <input class="prop-input" type="number" step="15" [(ngModel)]="selectedProps.rotationY" (change)="applyProps()" />
+          <input class="rotation-range" type="range" min="-180" max="180" step="5"
+                 [(ngModel)]="selectedProps.rotationY" (input)="applyProps()" />
+        </div>
+
+        <!-- Dimensions -->
+        <label class="prop-label">Size (ft)</label>
+        <div class="prop-row three">
+          <div class="prop-field">
+            <span class="prop-axis x">W</span>
+            <input class="prop-input sm" type="number" step="0.5" min="0.5" [(ngModel)]="selectedProps.width" (change)="applyProps()" />
+          </div>
+          <div class="prop-field">
+            <span class="prop-axis z">D</span>
+            <input class="prop-input sm" type="number" step="0.5" min="0.5" [(ngModel)]="selectedProps.depth" (change)="applyProps()" />
+          </div>
+          <div class="prop-field">
+            <span class="prop-axis y">H</span>
+            <input class="prop-input sm" type="number" step="0.5" min="0.5" [(ngModel)]="selectedProps.height" (change)="applyProps()" />
+          </div>
+        </div>
+
+        <!-- Color -->
+        <label class="prop-label">Color</label>
+        <div class="color-row">
+          <input type="color" class="color-picker" [value]="selectedProps.color"
+                 (input)="selectedProps!.color = $any($event.target).value; applyProps()" />
+          <span class="color-hex">{{ selectedProps.color }}</span>
+          <!-- Preset swatches -->
+          <div class="swatches">
+            @for (c of ['#8b7355','#5c3d1e','#3d2b1a','#6b4c2a','#4a7c59','#6366f1','#f59e0b','#94a3b8','#ddd0c8','#444444']; track c) {
+              <button class="swatch" [style.background]="c" (click)="selectedProps!.color = c; applyProps()"></button>
+            }
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="prop-actions">
+          <button class="btn-prop dup" (click)="duplicateSelected()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Duplicate
+          </button>
+          <button class="btn-prop del" (click)="removeSelected()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+            Delete
+          </button>
+        </div>
+      </div>
+    } @else {
+      <!-- Room settings (when nothing selected) -->
+      <div class="props-header">
+        <span class="props-icon">🏠</span>
+        <span class="props-title">Room</span>
+      </div>
+      <div class="props-body">
+        <label class="prop-label">Width (ft)</label>
+        <input class="prop-input" type="number" step="1" min="8" [(ngModel)]="roomDims.width" (change)="rebuildRoom()" />
+
+        <label class="prop-label">Length (ft)</label>
+        <input class="prop-input" type="number" step="1" min="8" [(ngModel)]="roomDims.length" (change)="rebuildRoom()" />
+
+        <label class="prop-label">Height (ft)</label>
+        <input class="prop-input" type="number" step="0.5" min="7" [(ngModel)]="roomDims.height" (change)="rebuildRoom()" />
+
+        @if (placedItems.length === 0) {
+          <p class="empty-hint">
+            Click a furniture item on the left to place it in the room.
+          </p>
+        }
+
+        <p class="kbd-legend">
+          <strong>Shortcuts:</strong><br/>
+          G — Move &nbsp; R — Rotate &nbsp; S — Scale<br/>
+          Shift+D — Duplicate &nbsp; Del — Delete<br/>
+          Right-click object for menu
+        </p>
+      </div>
+    }
+  </aside>
+
+</div>

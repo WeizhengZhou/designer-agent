@@ -1,0 +1,69 @@
+<article class="product-card" (click)="cardClick.emit(product)" tabindex="0"
+         (keydown.enter)="cardClick.emit(product)" role="button"
+         [attr.aria-label]="product.title">
+
+  <!-- Image -->
+  <div class="card-img-wrap">
+    <img [src]="imgSrc" [alt]="product.title" class="card-img"
+         (error)="onImgError()" loading="lazy" />
+    <span class="category-badge">{{ product.category }}</span>
+    @if (!product.in_stock) {
+      <span class="out-of-stock-badge">Out of Stock</span>
+    }
+    <!-- Add to Plan button -->
+    <button class="plan-btn" [class.in-plan]="inPlan" (click)="addToPlan($event)"
+            [title]="inPlan ? 'In plan (' + planQty + ')' : 'Add to plan'">
+      @if (inPlan) {
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        {{ planQty }}
+      } @else {
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Plan
+      }
+    </button>
+  </div>
+
+  <!-- Body -->
+  <div class="card-body">
+    <p class="seller-name">{{ product.seller }}</p>
+    <h3 class="card-title">{{ product.title }}</h3>
+
+    @if (product.short_description) {
+      <p class="card-desc">{{ product.short_description }}</p>
+    }
+
+    <!-- Stars (only if rating > 0) -->
+    @if (product.rating > 0) {
+      <div class="card-rating">
+        @for (i of stars; track i) {
+          <svg class="star" [class.filled]="i < filledStars"
+               viewBox="0 0 24 24" width="12" height="12">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+          </svg>
+        }
+        @if (product.review_count > 0) {
+          <span class="review-count">({{ product.review_count | number }})</span>
+        }
+      </div>
+    }
+
+    <!-- Price row -->
+    <div class="card-footer">
+      @if (product.price > 0) {
+        <span class="card-price">${{ product.price | number:'1.0-0' }}</span>
+      } @else {
+        <span class="card-price card-price--na">See price</span>
+      }
+      @if (product.style) {
+        <span class="card-style-tag">{{ product.style }}</span>
+      }
+    </div>
+  </div>
+
+  <!-- External link hint -->
+  <div class="visit-hint">View on {{ product.seller }} →</div>
+</article>

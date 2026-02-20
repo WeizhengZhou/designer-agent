@@ -1,0 +1,96 @@
+<div class="plan-panel">
+
+  <!-- Header -->
+  <div class="plan-header">
+    <span class="plan-icon">📋</span>
+    @if (editingName) {
+      <input class="plan-name-input" type="text" [(ngModel)]="plan.name"
+             (blur)="planService.renamePlan(plan.name); editingName = false"
+             (keydown.enter)="planService.renamePlan(plan.name); editingName = false"
+             autofocus />
+    } @else {
+      <span class="plan-name" (click)="editingName = true" title="Click to rename">
+        {{ plan.name }}
+      </span>
+    }
+    @if (plan.items.length > 0) {
+      <button class="clear-btn" (click)="planService.clearPlan()" title="Clear all items">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+        </svg>
+        Clear
+      </button>
+    }
+  </div>
+
+  <!-- Empty state -->
+  @if (plan.items.length === 0) {
+    <div class="plan-empty">
+      <div class="empty-icon">🛒</div>
+      <h3>Your plan is empty</h3>
+      <p>Browse products and click <strong>+ Plan</strong> on any item to add it here.</p>
+    </div>
+  } @else {
+
+    <!-- Item list -->
+    <div class="plan-items">
+      @for (item of plan.items; track item.id) {
+        <div class="plan-item">
+          <img class="item-thumb" [src]="thumbSrc(item.product)" [alt]="item.product.title" />
+
+          <div class="item-info">
+            <p class="item-title">{{ item.product.title }}</p>
+            <p class="item-meta">{{ item.product.category }} · {{ item.product.seller }}</p>
+            @if (item.product.price > 0) {
+              <p class="item-price">${{ item.product.price | number:'1.0-0' }} each</p>
+            }
+          </div>
+
+          <div class="item-controls">
+            <button class="qty-btn" (click)="updateQty(item, -1)">−</button>
+            <span class="qty-val">{{ item.quantity }}</span>
+            <button class="qty-btn" (click)="updateQty(item, 1)">+</button>
+            <button class="remove-btn" (click)="removeItem(item)" title="Remove">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Summary -->
+    <div class="plan-summary">
+      <div class="summary-row">
+        <span class="summary-label">{{ planService.itemCount }} items</span>
+        @if (totalPrice > 0) {
+          <span class="summary-total">Est. ${{ totalPrice | number:'1.0-0' }}</span>
+        }
+      </div>
+    </div>
+
+    <!-- Visualization actions -->
+    <div class="viz-actions">
+      <p class="viz-title">Visualize Plan</p>
+
+      <button class="viz-btn" (click)="visualize3D()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+        Open in 3D View
+      </button>
+
+      <button class="viz-btn secondary" (click)="visualizeFloorPlan()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M9 3v18M3 9h6M3 15h6"/>
+        </svg>
+        Open in Floor Plan
+      </button>
+    </div>
+
+  }
+</div>

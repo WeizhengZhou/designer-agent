@@ -1,0 +1,118 @@
+@if (product) {
+  <!-- Overlay -->
+  <div class="overlay" (click)="close()"></div>
+
+  <!-- Panel -->
+  <aside class="detail-panel">
+    <button class="close-btn" (click)="close()" aria-label="Close">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+
+    <!-- Image -->
+    <div class="image-section">
+      <img [src]="imgSrc(product.images[activeImageIndex])" [alt]="product.title"
+           class="main-image" (error)="onImgError($event)" />
+      @if (product.images.length > 1) {
+        <div class="thumbnails">
+          @for (img of product.images; track $index) {
+            <button class="thumb" [class.active]="$index === activeImageIndex"
+                    (click)="activeImageIndex = $index">
+              <img [src]="imgSrc(img)" [alt]="product.title" (error)="onImgError($event)" />
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Info -->
+    <div class="info-section">
+      <p class="seller">{{ product.seller }}</p>
+      <h2 class="title">{{ product.title }}</h2>
+
+      <!-- Rating (only if set) -->
+      @if (product.rating > 0) {
+        <div class="rating-row">
+          @for (s of stars; track s.i) {
+            <svg class="star" [class.filled]="s.filled" viewBox="0 0 24 24" width="15" height="15">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+          }
+          <span class="rating-val">{{ product.rating }}</span>
+          @if (product.review_count > 0) {
+            <span class="review-count">({{ product.review_count | number }} reviews)</span>
+          }
+        </div>
+      }
+
+      <!-- Price + stock -->
+      <div class="price-row">
+        @if (product.price > 0) {
+          <span class="price">${{ product.price | number:'1.0-0' }}</span>
+        } @else {
+          <span class="price price--na">Price on site</span>
+        }
+        @if (product.in_stock) {
+          <span class="in-stock">✓ Available</span>
+        } @else {
+          <span class="out-stock">Out of Stock</span>
+        }
+      </div>
+
+      <!-- Tags (category + style) -->
+      <div class="tags">
+        @if (product.category) { <span class="tag cat-tag">{{ product.category }}</span> }
+        @if (product.style)    { <span class="tag style-tag">{{ product.style }}</span> }
+        @for (t of product.tags.slice(0, 4); track t) {
+          <span class="tag">{{ t }}</span>
+        }
+      </div>
+
+      <!-- Description -->
+      @if (product.description) {
+        <div class="section">
+          <h4>Description</h4>
+          <p class="description">{{ product.description }}</p>
+        </div>
+      }
+
+      <!-- Colors -->
+      @if (product.colors.length > 0) {
+        <div class="section">
+          <h4>Available Finishes</h4>
+          <ul class="color-list">
+            @for (c of product.colors; track c) { <li>{{ c }}</li> }
+          </ul>
+        </div>
+      }
+
+      <!-- Dimensions -->
+      @if (product.dimensions) {
+        <div class="section">
+          <h4>Dimensions</h4>
+          <div class="dims">
+            <span>W {{ product.dimensions.width }}"</span>
+            <span>D {{ product.dimensions.depth }}"</span>
+            <span>H {{ product.dimensions.height }}"</span>
+          </div>
+        </div>
+      }
+
+      <!-- CTA -->
+      <div class="cta-row">
+        <a [href]="product.url" target="_blank" rel="noopener noreferrer"
+           class="btn-primary" [class.disabled]="product.url === '#'">
+          Shop on {{ product.seller }}
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left:4px">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+        </a>
+        <button class="btn-secondary" (click)="close()">Back</button>
+      </div>
+    </div>
+  </aside>
+}
