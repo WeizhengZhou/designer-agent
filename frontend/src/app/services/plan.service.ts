@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { Plan, PlanItem, Product } from '../models';
+import { Dimensions, Plan, PlanItem, Product } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class PlanService {
@@ -42,6 +42,16 @@ export class PlanService {
     if (quantity <= 0) { this.removeItem(itemId); return; }
     const items = this._plan.value.items.map(i =>
       i.id === itemId ? { ...i, quantity } : i
+    );
+    this._plan.next({ ...this._plan.value, items });
+  }
+
+  /** Update the stored product dimensions (in inches) for a plan item. */
+  updateProductDimensions(productId: string, dimensions: Dimensions): void {
+    const items = this._plan.value.items.map(i =>
+      i.product.id === productId
+        ? { ...i, product: { ...i.product, dimensions } }
+        : i
     );
     this._plan.next({ ...this._plan.value, items });
   }

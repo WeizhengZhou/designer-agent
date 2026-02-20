@@ -1,7 +1,17 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { FurnitureStoreService } from './furniture-store.service';
-import { ChatMessage, Product } from '../models';
+import { ChatMessage, Product, Scene3DData } from '../models';
+
+export interface LayoutFurnitureInput {
+  name: string;
+  preset_type: string;
+  quantity: number;
+  width: number;
+  depth: number;
+  height: number;
+  color: string;
+}
 
 const WS_URL  = 'ws://localhost:8000/api/chat/ws';
 const API_URL = 'http://localhost:8000/api';
@@ -166,6 +176,17 @@ export class ApiService implements OnDestroy {
 
   generateImageFromPlan(furniture_items: { title: string, image_url: string }[]) {
     return this.http.post<{ image: string, mime_type: string }>(`${API_URL}/images/generate-from-plan`, { furniture_items });
+  }
+
+  generate3dLayout(
+    furniture_items: LayoutFurnitureInput[],
+    room_width = 15,
+    room_length = 20,
+    room_height = 9,
+  ) {
+    return this.http.post<Scene3DData>(`${API_URL}/layout/generate-3d-layout`, {
+      furniture_items, room_width, room_length, room_height,
+    });
   }
 
 

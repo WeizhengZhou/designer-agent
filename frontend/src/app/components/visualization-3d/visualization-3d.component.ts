@@ -9,7 +9,10 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { FurnitureStoreService } from '../../services/furniture-store.service';
+import { PlanService } from '../../services/plan.service';
+import { ApiService, LayoutFurnitureInput } from '../../services/api.service';
 import { Scene3DData } from '../../models';
+import { buildFurnitureGroup } from './furniture-geometry';
 
 // ── Furniture preset catalog ───────────────────────────────────────────────────
 
@@ -57,8 +60,6 @@ interface PlacedItem {
   name: string;
   preset: FurniturePreset;
   group: THREE.Group;
-  mesh: THREE.Mesh;
-  edges: THREE.LineSegments;
   color: string;
 }
 
@@ -90,6 +91,8 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
   activeMode: 'translate' | 'rotate' | 'scale' = 'translate';
   contextMenu: ContextMenu | null = null;
   roomDims = { width: 15, length: 20, height: 9 };
+  isGeneratingLayout = false;
+  generateError: string | null = null;
 
   readonly groupedPresets = this.buildGroupedPresets();
 
@@ -102,7 +105,6 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
   private furnitureGroup!: THREE.Group;
   private roomGroup!: THREE.Group;
   private raycaster = new THREE.Raycaster();
-  private floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   private animId = 0;
   private resizeObserver!: ResizeObserver;
   private labelContainer!: HTMLDivElement;
@@ -113,6 +115,8 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
   constructor(
     private store: FurnitureStoreService,
     private cdr: ChangeDetectorRef,
+    private planService: PlanService,
+    private apiService: ApiService,
   ) {}
 
   ngOnInit() {
@@ -125,6 +129,89 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
   ngAfterViewInit() {
     this.initThree();
     if (this.sceneData) this.loadFromSceneData(this.sceneData);
+  }
+
+  get planItemCount(): number { return this.planService.itemCount; }
+
+  generateFromPlan() {
+    const plan = this.planService.currentPlan;
+    if (!plan.items.length) return;
+
+    this.isGeneratingLayout = true;
+    this.generateError = null;
+    this.cdr.detectChanges();
+
+    const furnitureInputs: LayoutFurnitureInput[] = plan.items.map(item => {
+      const preset = this.matchPreset(item.product.title, item.product.category);
+      // Use actual product dimensions (inches → feet) when available, else preset defaults
+      const dims = item.product.dimensions;
+      return {
+        name: item.product.title,
+        preset_type: preset.type,
+        quantity: item.quantity,
+        width:  dims?.width  ? dims.width  / 12 : preset.w,
+        depth:  dims?.depth  ? dims.depth  / 12 : preset.d,
+        height: dims?.height ? dims.height / 12 : preset.h,
+        color: preset.color,
+      };
+    });
+
+    this.apiService
+      .generate3dLayout(furnitureInputs, this.roomDims.width, this.roomDims.length, this.roomDims.height)
+      .subscribe({
+        next: data => {
+          this.loadFromSceneData(data);
+          this.isGeneratingLayout = false;
+          this.cdr.detectChanges();
+        },
+        error: err => {
+          this.generateError = err?.error?.detail ?? 'Layout generation failed.';
+          this.isGeneratingLayout = false;
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
+  private matchPreset(title: string, category: string): FurniturePreset {
+    const t = title.toLowerCase();
+
+    const rules: [string[], string][] = [
+      [['king bed', 'king-size bed', 'king size bed'],   'bed-king'],
+      [['queen bed', 'queen-size bed', 'queen size bed'], 'bed-queen'],
+      [['twin bed', 'single bed', 'twin size'],          'bed-single'],
+      [['sectional'],                                    'sectional'],
+      [['sofa', 'couch', 'loveseat', 'chesterfield'],    'sofa'],
+      [['armchair', 'accent chair', 'recliner'],         'armchair'],
+      [['office chair'],                                 'office-chair'],
+      [['dining chair'],                                 'dining-chair'],
+      [['coffee table'],                                 'coffee-table'],
+      [['side table', 'end table'],                      'side-table'],
+      [['nightstand', 'bedside table', 'bedside'],       'nightstand'],
+      [['floor lamp', 'torchiere'],                      'floor-lamp'],
+      [['tv stand', 'tv console', 'media console', 'entertainment center', 'media unit'], 'tv-stand'],
+      [['dining table', 'kitchen table', 'dinner table'], 'dining-table'],
+      [['dresser', 'chest of drawers'],                  'dresser'],
+      [['wardrobe', 'armoire'],                          'wardrobe'],
+      [['bookshelf', 'bookcase', 'shelving unit'],       'bookshelf'],
+      [['desk', 'workstation', 'writing desk'],          'desk'],
+      [['area rug', 'rug', 'carpet'],                    'rug'],
+      [['plant', 'potted'],                              'plant'],
+    ];
+
+    for (const [keywords, type] of rules) {
+      if (keywords.some(kw => t.includes(kw))) {
+        return FURNITURE_PRESETS.find(p => p.type === type) ?? FURNITURE_PRESETS[0];
+      }
+    }
+
+    const c = category.toLowerCase();
+    if (c.includes('sofa') || c.includes('seating')) return FURNITURE_PRESETS.find(p => p.type === 'sofa')!;
+    if (c.includes('dining'))   return FURNITURE_PRESETS.find(p => p.type === 'dining-table')!;
+    if (c.includes('bed'))      return FURNITURE_PRESETS.find(p => p.type === 'bed-queen')!;
+    if (c.includes('office') || c.includes('desk')) return FURNITURE_PRESETS.find(p => p.type === 'desk')!;
+    if (c.includes('rug'))      return FURNITURE_PRESETS.find(p => p.type === 'rug')!;
+
+    return FURNITURE_PRESETS[0];
   }
 
   ngOnDestroy() {
@@ -182,8 +269,7 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
     this.camera.position.set(18, 14, 18);
 
     // Lights
-    const ambient = new THREE.AmbientLight(0xffffff, 0.7);
-    this.scene.add(ambient);
+    this.scene.add(new THREE.AmbientLight(0xffffff, 0.7));
 
     const sun = new THREE.DirectionalLight(0xfffbf0, 1.1);
     sun.position.set(12, 18, 12);
@@ -198,11 +284,10 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
     this.scene.add(fill);
 
     // Groups
-    this.roomGroup     = new THREE.Group();
+    this.roomGroup      = new THREE.Group();
     this.furnitureGroup = new THREE.Group();
     this.scene.add(this.roomGroup, this.furnitureGroup);
 
-    // Build room geometry
     this.buildRoom();
 
     // Orbit controls
@@ -228,11 +313,9 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
     this.scene.add(this.transformControls);
     this.setMode('translate');
 
-    // Canvas events
     canvas.addEventListener('click',       e => this.onCanvasClick(e));
     canvas.addEventListener('contextmenu', e => this.onCanvasRightClick(e));
 
-    // Resize
     this.resizeObserver = new ResizeObserver(() => this.onResize());
     this.resizeObserver.observe(container);
 
@@ -243,7 +326,6 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
     this.roomGroup.clear();
     const { width: W, length: L, height: H } = this.roomDims;
 
-    // Wood floor
     const floorGeo = new THREE.PlaneGeometry(W, L);
     const floorMat = new THREE.MeshStandardMaterial({ map: this.makeFloorTexture(W, L), roughness: 0.9 });
     const floor    = new THREE.Mesh(floorGeo, floorMat);
@@ -253,14 +335,12 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
     floor.name = '__floor';
     this.roomGroup.add(floor);
 
-    // Grid overlay (faint, on floor)
     const grid = new THREE.GridHelper(Math.max(W, L) * 2, Math.max(W, L) * 2, 0xb0bec5, 0xcfd8dc);
     grid.position.set(W / 2, 0.003, L / 2);
     (grid.material as THREE.Material).opacity = 0.3;
     (grid.material as THREE.Material).transparent = true;
     this.roomGroup.add(grid);
 
-    // Walls (inside-visible box)
     const wallMat = new THREE.MeshStandardMaterial({ color: 0xf5f0e8, roughness: 0.95, side: THREE.BackSide });
     const wallGeo = new THREE.BoxGeometry(W, H, L);
     const walls   = new THREE.Mesh(wallGeo, wallMat);
@@ -268,13 +348,13 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
     walls.name = '__walls';
     this.roomGroup.add(walls);
 
-    // Wall border lines
-    const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(W, H, L));
-    const lines = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.35 }));
+    const lines = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(W, H, L)),
+      new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.35 }),
+    );
     lines.position.set(W / 2, H / 2, L / 2);
     this.roomGroup.add(lines);
 
-    // Update camera/controls target
     if (this.orbitControls) {
       this.orbitControls.target.set(W / 2, 0, L / 2);
       this.orbitControls.update();
@@ -286,26 +366,16 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
     const c = document.createElement('canvas');
     c.width = 512; c.height = 512;
     const ctx = c.getContext('2d')!;
-
     ctx.fillStyle = '#c8a87a';
     ctx.fillRect(0, 0, 512, 512);
-
-    // Plank rows
-    ctx.strokeStyle = '#a8885a';
-    ctx.lineWidth = 2;
-    for (let y = 0; y <= 512; y += 64) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(512, y); ctx.stroke();
-    }
-    // Grain lines
-    ctx.strokeStyle = '#b89862';
-    ctx.lineWidth = 0.5;
+    ctx.strokeStyle = '#a8885a'; ctx.lineWidth = 2;
+    for (let y = 0; y <= 512; y += 64) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(512, y); ctx.stroke(); }
+    ctx.strokeStyle = '#b89862'; ctx.lineWidth = 0.5;
     for (let i = 0; i < 40; i++) {
       const y0 = Math.random() * 512;
       ctx.beginPath(); ctx.moveTo(0, y0);
-      ctx.bezierCurveTo(170, y0 + 3, 340, y0 - 3, 512, y0 + 2);
-      ctx.stroke();
+      ctx.bezierCurveTo(170, y0 + 3, 340, y0 - 3, 512, y0 + 2); ctx.stroke();
     }
-
     const tex = new THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(roomW / 5, roomL / 5);
@@ -330,17 +400,16 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
 
   addFromPreset(preset: FurniturePreset) {
     const id    = crypto.randomUUID();
-    const color = preset.color;
-    const { group, mesh, edges } = this.buildMesh(preset, color);
+    const group = buildFurnitureGroup(preset.type, preset.w, preset.d, preset.h, preset.color);
 
-    // Place near center with small random offset so stacked items are visible
+    // Place near room centre with a small random offset
     const cx = this.roomDims.width  / 2 + (Math.random() - 0.5) * 2;
     const cz = this.roomDims.length / 2 + (Math.random() - 0.5) * 2;
-    group.position.set(cx, preset.h / 2, cz);
+    group.position.set(cx, 0, cz);   // y=0 → group origin sits on the floor
     group.userData['itemId'] = id;
     this.furnitureGroup.add(group);
 
-    const item: PlacedItem = { id, name: preset.name, preset, group, mesh, edges, color };
+    const item: PlacedItem = { id, name: preset.name, preset, group, color: preset.color };
     this.itemMap.set(id, item);
     this.placedItems = [...this.itemMap.values()];
     this.selectItem(item);
@@ -361,17 +430,17 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
 
   duplicateSelected() {
     if (!this.selectedItem) return;
-    const src = this.selectedItem;
+    const src   = this.selectedItem;
     const newId = crypto.randomUUID();
-    const { group, mesh, edges } = this.buildMesh(src.preset, src.color);
+    const group = buildFurnitureGroup(src.preset.type, src.preset.w, src.preset.d, src.preset.h, src.color);
     group.position.copy(src.group.position).add(new THREE.Vector3(1.5, 0, 1.5));
+    group.position.y = 0;   // keep on floor
     group.rotation.copy(src.group.rotation);
     group.scale.copy(src.group.scale);
-    group.position.y = src.preset.h * src.group.scale.y / 2;
     group.userData['itemId'] = newId;
     this.furnitureGroup.add(group);
 
-    const item: PlacedItem = { id: newId, name: src.name + ' (copy)', preset: src.preset, group, mesh, edges, color: src.color };
+    const item: PlacedItem = { id: newId, name: src.name + ' (copy)', preset: src.preset, group, color: src.color };
     this.itemMap.set(newId, item);
     this.placedItems = [...this.itemMap.values()];
     this.selectItem(item);
@@ -415,11 +484,11 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
     this.transformControls.setMode(mode);
     if (mode === 'translate') {
       this.transformControls.showX = true;
-      this.transformControls.showY = false;  // no vertical movement
+      this.transformControls.showY = false;
       this.transformControls.showZ = true;
     } else if (mode === 'rotate') {
       this.transformControls.showX = false;
-      this.transformControls.showY = true;   // Y-axis spin only
+      this.transformControls.showY = true;
       this.transformControls.showZ = false;
     } else {
       this.transformControls.showX = true;
@@ -437,24 +506,21 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
     this.selectedItem.name = this.selectedProps.name;
     g.position.x = this.selectedProps.x;
     g.position.z = this.selectedProps.z;
+    g.position.y = 0;   // always on the floor (geometry starts at y=0)
     g.rotation.y = THREE.MathUtils.degToRad(this.selectedProps.rotationY);
     g.scale.set(
       this.selectedProps.width  / p.w,
       this.selectedProps.height / p.h,
       this.selectedProps.depth  / p.d,
     );
-    g.position.y = this.selectedProps.height / 2;
 
     if (this.selectedProps.color !== this.selectedItem.color) {
       this.selectedItem.color = this.selectedProps.color;
-      (this.selectedItem.mesh.material as THREE.MeshStandardMaterial)
-        .color.setHex(parseInt(this.selectedProps.color.slice(1), 16));
+      this.recolorGroup(this.selectedItem);
     }
   }
 
-  rebuildRoom() {
-    this.buildRoom();
-  }
+  rebuildRoom() { this.buildRoom(); }
 
   resetCamera() {
     const { width: W, length: L, height: H } = this.roomDims;
@@ -463,59 +529,58 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
     this.orbitControls.update();
   }
 
-  // ── Mesh builder ───────────────────────────────────────────────────────────────
-  private buildMesh(preset: FurniturePreset, colorHex: string): {
-    group: THREE.Group; mesh: THREE.Mesh; edges: THREE.LineSegments;
-  } {
-    const geo  = new THREE.BoxGeometry(preset.w, preset.h, preset.d);
-    const mat  = new THREE.MeshStandardMaterial({
-      color:     parseInt(colorHex.slice(1), 16),
-      roughness: 0.85,
-      metalness: 0.05,
+  // ── Edge highlight (traverse group) ───────────────────────────────────────────
+  private setEdgeHighlight(item: PlacedItem, on: boolean) {
+    item.group.traverse(child => {
+      if (child instanceof THREE.LineSegments) {
+        const mat = child.material as THREE.LineBasicMaterial;
+        if (on) { mat.color.setHex(0x6366f1); mat.opacity = 1; }
+        else    { mat.color.setHex(0x1e293b); mat.opacity = 0.18; }
+      }
     });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-
-    const edgeGeo  = new THREE.EdgesGeometry(geo);
-    const edgeMat  = new THREE.LineBasicMaterial({ color: 0x1e293b, transparent: true, opacity: 0.22 });
-    const edges    = new THREE.LineSegments(edgeGeo, edgeMat);
-
-    const group = new THREE.Group();
-    group.add(mesh, edges);
-    return { group, mesh, edges };
   }
 
-  private setEdgeHighlight(item: PlacedItem, on: boolean) {
-    const mat = item.edges.material as THREE.LineBasicMaterial;
-    if (on) { mat.color.setHex(0x6366f1); mat.opacity = 1; mat.linewidth = 2; }
-    else     { mat.color.setHex(0x1e293b); mat.opacity = 0.22; mat.linewidth = 1; }
+  /** Rebuild the group's geometry with a new primary color. */
+  private recolorGroup(item: PlacedItem) {
+    const p = item.preset;
+    const newGroup = buildFurnitureGroup(p.type, p.w * item.group.scale.x, p.d * item.group.scale.z, p.h * item.group.scale.y, item.color);
+    newGroup.position.copy(item.group.position);
+    newGroup.rotation.copy(item.group.rotation);
+    newGroup.scale.set(1, 1, 1);
+    newGroup.userData['itemId'] = item.id;
+    this.furnitureGroup.remove(item.group);
+    this.furnitureGroup.add(newGroup);
+    item.group = newGroup;
+    this.transformControls.attach(newGroup);
+    this.setEdgeHighlight(item, true);
   }
 
   // ── Click handling ──────────────────────────────────────────────────────────────
   private onCanvasClick(e: MouseEvent) {
     if (e.button !== 0) return;
     this.contextMenu = null;
+    if (this.transformControls.dragging) return;
 
     const { x, y } = this.getNDC(e);
     this.raycaster.setFromCamera(new THREE.Vector2(x, y), this.camera);
 
-    // Check if TransformControls handled the click
-    if (this.transformControls.dragging) return;
+    // Collect all furniture meshes
+    const meshes: THREE.Mesh[] = [];
+    this.itemMap.forEach(item => {
+      item.group.traverse(child => { if (child instanceof THREE.Mesh) meshes.push(child); });
+    });
 
-    // Collect all item meshes
-    const meshes = [...this.itemMap.values()].map(i => i.mesh);
-    const hits   = this.raycaster.intersectObjects(meshes);
-
+    const hits = this.raycaster.intersectObjects(meshes);
     if (hits.length > 0) {
-      const hitMesh  = hits[0].object as THREE.Mesh;
-      const hitGroup = hitMesh.parent!;
-      const id = hitGroup.userData['itemId'] as string;
-      const item = this.itemMap.get(id);
-      if (item) { this.selectItem(item); return; }
+      // Walk up the parent chain to find the group with itemId
+      let obj: THREE.Object3D | null = hits[0].object;
+      while (obj && !obj.userData['itemId']) obj = obj.parent;
+      if (obj) {
+        const item = this.itemMap.get(obj.userData['itemId'] as string);
+        if (item) { this.selectItem(item); return; }
+      }
     }
 
-    // Clicked empty space — deselect
     this.selectItem(null);
   }
 
@@ -535,10 +600,10 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
     };
   }
 
+  /** Snap group to floor: since geometry starts at y=0 in local space, group.position.y = 0. */
   private snapToFloor() {
     if (!this.selectedItem) return;
-    const item = this.selectedItem;
-    item.group.position.y = item.preset.h * item.group.scale.y / 2;
+    this.selectedItem.group.position.y = 0;
   }
 
   private syncPropsFromSelected() {
@@ -567,7 +632,7 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   // ── Load AI scene data ──────────────────────────────────────────────────────────
-  private loadFromSceneData(data: Scene3DData | null) {
+  loadFromSceneData(data: Scene3DData | null) {
     this.clearAll();
     if (!data) return;
 
@@ -578,27 +643,31 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
     };
     this.buildRoom();
 
-    data.furniture_items.forEach((fi, i) => {
-      // Find closest preset by type name
+    data.furniture_items.forEach(fi => {
       const preset = FURNITURE_PRESETS.find(p =>
+        p.type === fi.type ||
         p.type.includes(fi.type?.toLowerCase() ?? '') ||
         fi.type?.toLowerCase().includes(p.type)
       ) ?? FURNITURE_PRESETS[0];
 
+      const W = fi.width  || preset.w;
+      const D = fi.depth  || preset.d;
+      const H = fi.height || preset.h;
       const color = fi.color || preset.color;
-      const { group, mesh, edges } = this.buildMesh(
-        { ...preset, w: fi.width || preset.w, d: fi.depth || preset.d, h: fi.height || preset.h },
-        color,
-      );
+
+      const group = buildFurnitureGroup(preset.type, W, D, H, color);
       const id = fi.id || crypto.randomUUID();
-      group.position.set(fi.x + (fi.width || preset.w) / 2, (fi.height || preset.h) / 2, fi.z + (fi.depth || preset.d) / 2);
+
+      // fi.x / fi.z = left-front corner; centre the group at (x + W/2, 0, z + D/2)
+      group.position.set(fi.x + W / 2, 0, fi.z + D / 2);
       group.rotation.y = THREE.MathUtils.degToRad(fi.rotation || 0);
       group.userData['itemId'] = id;
       this.furnitureGroup.add(group);
 
-      const item: PlacedItem = { id, name: fi.name || preset.name, preset, group, mesh, edges, color };
+      const item: PlacedItem = { id, name: fi.name || preset.name, preset, group, color };
       this.itemMap.set(id, item);
     });
+
     this.placedItems = [...this.itemMap.values()];
     this.cdr.detectChanges();
   }
@@ -630,7 +699,8 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
 
       const pos = new THREE.Vector3();
       item.group.getWorldPosition(pos);
-      pos.y += item.preset.h * item.group.scale.y / 2 + 0.5;
+      // Group origin is at floor (y=0 in world); top of piece = H * scale
+      pos.y += item.preset.h * item.group.scale.y + 0.5;
       pos.project(this.camera);
 
       if (pos.z >= 1) { div.style.opacity = '0'; return; }
@@ -639,7 +709,6 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
       div.style.top  = `${((-pos.y + 1) / 2) * H - 18}px`;
     });
 
-    // Remove labels for deleted items
     this.labelDivs.forEach((div, id) => {
       if (!this.itemMap.has(id)) { div.remove(); this.labelDivs.delete(id); }
     });

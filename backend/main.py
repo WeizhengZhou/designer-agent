@@ -5,7 +5,7 @@ load_dotenv()  # Must be before any google-generativeai imports
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import chat, products, images
+from routers import chat, products, images, layout, dimensions
 
 app = FastAPI(
     title="Interior Designer Agent API",
@@ -24,6 +24,8 @@ app.add_middleware(
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(products.router, prefix="/api/products", tags=["products"])
 app.include_router(images.router, prefix="/api/images", tags=["images"])
+app.include_router(layout.router,      prefix="/api/layout",     tags=["layout"])
+app.include_router(dimensions.router,  prefix="/api/dimensions",  tags=["dimensions"])
 
 
 @app.get("/health")

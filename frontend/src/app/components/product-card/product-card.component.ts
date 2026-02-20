@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Product } from '../../models';
 import { PlanService } from '../../services/plan.service';
+import { DimensionService } from '../../services/dimension.service';
 
 const PROXY = 'http://localhost:8000/api/images/proxy?url=';
 
@@ -18,11 +19,25 @@ export class ProductCardComponent {
 
   imgFailed = false;
 
-  constructor(public plan: PlanService) {}
+  constructor(
+    public plan: PlanService,
+    private dimensionSvc: DimensionService,
+  ) {}
 
   addToPlan(e: Event): void {
     e.stopPropagation();
+    const wasInPlan = this.plan.isInPlan(this.product.id);
     this.plan.addProduct(this.product);
+
+    // Kick off dimension fetch in the background the first time the product is added.
+    // Once dimensions arrive they are stored on the plan item for use in 3D layout.
+    if (!wasInPlan && !this.product.dimensions) {
+      this.dimensionSvc.fetchDimensions(this.product).subscribe(dims => {
+        if (dims) {
+          this.plan.updateProductDimensions(this.product.id, dims);
+        }
+      });
+    }
   }
 
   get inPlan(): boolean { return this.plan.isInPlan(this.product.id); }

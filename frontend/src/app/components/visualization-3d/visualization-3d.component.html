@@ -27,6 +27,30 @@
   <div class="canvas-area">
     <canvas #canvas3d class="viz-canvas"></canvas>
 
+    <!-- Generate from Plan banner -->
+    <div class="gen-plan-bar">
+      <button class="gen-plan-btn"
+              [class.loading]="isGeneratingLayout"
+              [disabled]="isGeneratingLayout || planItemCount === 0"
+              (click)="generateFromPlan()">
+        @if (isGeneratingLayout) {
+          <span class="spinner"></span>
+          Generating layout…
+        } @else {
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          Generate from Selected Plan
+          @if (planItemCount > 0) {
+            <span class="plan-badge">{{ planItemCount }}</span>
+          }
+        }
+      </button>
+      @if (generateError) {
+        <span class="gen-error">{{ generateError }}</span>
+      }
+    </div>
+
     <!-- Placed items list (mini) -->
     @if (placedItems.length > 0) {
       <div class="placed-list">
