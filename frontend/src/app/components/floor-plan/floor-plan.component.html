@@ -1,3 +1,20 @@
 <div class="floor-plan-wrap">
+  <!-- Floating toolbar -->
+  <div class="fp-toolbar">
+    <button class="fp-btn primary"
+            [disabled]="!hasScene3D"
+            (click)="generateFromScene3D()"
+            title="Convert current 3D view positions into a floor plan">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <path d="M3 9h18M9 21V9"/>
+      </svg>
+      Generate from 3D View
+    </button>
+    @if (!hasScene3D) {
+      <span class="fp-hint">Add furniture in 3D View first</span>
+    }
+  </div>
+
   <canvas #canvas class="floor-canvas"></canvas>
 </div>

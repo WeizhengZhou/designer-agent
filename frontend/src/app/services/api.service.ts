@@ -174,8 +174,13 @@ export class ApiService implements OnDestroy {
     return this.http.post<Product[]>(`${API_URL}/products/search`, { query, ...options });
   }
 
-  generateImageFromPlan(furniture_items: { title: string, image_url: string }[]) {
-    return this.http.post<{ image: string, mime_type: string }>(`${API_URL}/images/generate-from-plan`, { furniture_items });
+  generateImageFromPlan(
+    furniture_items: { title: string, image_url: string }[],
+    floorPlanDataUrl?: string,
+  ) {
+    const body: any = { furniture_items };
+    if (floorPlanDataUrl) body['floor_plan_image'] = floorPlanDataUrl;
+    return this.http.post<{ image: string, mime_type: string }>(`${API_URL}/images/generate-from-plan`, body);
   }
 
   generate3dLayout(

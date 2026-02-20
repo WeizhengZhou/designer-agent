@@ -8,6 +8,9 @@
         @if (tab.id === 'plan' && planItemCount > 0) {
           <span class="tab-badge">{{ planItemCount }}</span>
         }
+        @if (tab.id === 'assets' && uploadedCount > 0) {
+          <span class="tab-badge">{{ uploadedCount }}</span>
+        }
       </button>
     }
   </nav>
@@ -21,6 +24,88 @@
       @case ('plan') {
         <app-plan-panel></app-plan-panel>
       }
+
+      <!-- ── Uploads tab ──────────────────────────────────────────────────── -->
+      @case ('assets') {
+        <div class="uploads-panel">
+          <!-- Header -->
+          <div class="uploads-header">
+            <div class="uploads-header-left">
+              <h2 class="uploads-title">Uploaded Images</h2>
+              <p class="uploads-sub">Floor plans and furniture references</p>
+            </div>
+            <label class="upload-btn" title="Upload images">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              Upload Images
+              <input type="file" multiple accept="image/*" (change)="handleFileUpload($event)" hidden />
+            </label>
+          </div>
+
+          <!-- Floor plan callout -->
+          @if (floorPlanAsset) {
+            <div class="fp-callout">
+              <span class="fp-callout-icon">📐</span>
+              <span><strong>{{ floorPlanAsset.name }}</strong> is set as your floor plan and will be used as reference during image generation.</span>
+            </div>
+          }
+
+          <!-- Gallery -->
+          @if (uploadedAssets.length === 0) {
+            <div class="uploads-empty">
+              <div class="uploads-empty-icon">📁</div>
+              <h3>No uploads yet</h3>
+              <p>Upload floor plans and existing furniture images.<br/>They'll be used as references when generating room visuals.</p>
+              <label class="upload-btn upload-btn--large">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                Choose Images
+                <input type="file" multiple accept="image/*" (change)="handleFileUpload($event)" hidden />
+              </label>
+            </div>
+          } @else {
+            <div class="uploads-grid">
+              @for (asset of uploadedAssets; track asset.id) {
+                <div class="asset-card" [class.is-floor-plan]="asset.type === 'floor-plan'">
+                  <div class="asset-img-wrap">
+                    <img [src]="asset.dataUrl" [alt]="asset.name" class="asset-img" />
+                    @if (asset.type === 'floor-plan') {
+                      <span class="asset-badge fp-badge">📐 Floor Plan</span>
+                    } @else if (asset.type === 'reference') {
+                      <span class="asset-badge ref-badge">🪑 Reference</span>
+                    }
+                  </div>
+                  <div class="asset-meta">
+                    <p class="asset-name" [title]="asset.name">{{ asset.name }}</p>
+                    <div class="asset-type-row">
+                      <select class="asset-type-select"
+                              [value]="asset.type"
+                              (change)="setAssetType(asset.id, $any($event.target).value)">
+                        <option value="floor-plan">Floor Plan</option>
+                        <option value="reference">Reference</option>
+                        <option value="other">Other</option>
+                      </select>
+                      <button class="asset-delete" (click)="removeAsset(asset.id)" title="Remove">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline points="3 6 5 6 21 6"/>
+                          <path d="M19 6l-1 14H6L5 6"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
       @case ('floor-plan') {
         <app-floor-plan></app-floor-plan>
       }
@@ -29,9 +114,16 @@
       }
       @case ('room-images') {
         <div class="room-images-header" style="padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0;">
-          <h2 style="margin: 0; font-size: 1.125rem; font-weight: 600;">Room Visualizations</h2>
-          <button class="generate-btn" 
-                  (click)="generateImageFromPlan()" 
+          <div>
+            <h2 style="margin: 0; font-size: 1.125rem; font-weight: 600;">Room Visualizations</h2>
+            @if (floorPlanAsset) {
+              <p style="margin: 2px 0 0; font-size: 11px; color: #6366f1;">
+                📐 Using uploaded floor plan as reference
+              </p>
+            }
+          </div>
+          <button class="generate-btn"
+                  (click)="generateImageFromPlan()"
                   [disabled]="isGenerating || planItemCount === 0"
                   style="background: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
             @if (isGenerating) {

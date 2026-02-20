@@ -4,7 +4,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { FurnitureStoreService } from '../../services/furniture-store.service';
-import { FloorPlanData } from '../../models';
+import { FloorPlanData, FurniturePlacement, Scene3DData } from '../../models';
 
 @Component({
   selector: 'app-floor-plan',
@@ -17,16 +17,44 @@ export class FloorPlanComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('canvas') canvasRef!: ElementRef<HTMLCanvasElement>;
 
   floorPlan: FloorPlanData | null = null;
+  scene3d: Scene3DData | null = null;
   private sub = new Subscription();
   private ctx: CanvasRenderingContext2D | null = null;
   private resizeObserver!: ResizeObserver;
 
   constructor(private store: FurnitureStoreService) {}
 
+  get hasScene3D(): boolean {
+    return !!(this.scene3d && this.scene3d.furniture_items.length > 0);
+  }
+
+  /** Convert the current 3D scene layout into a floor plan and display it. */
+  generateFromScene3D(): void {
+    if (!this.scene3d) return;
+    const s = this.scene3d;
+    const W = s.room_width  || 15;
+    const L = s.room_length || 20;
+
+    const placements: FurniturePlacement[] = s.furniture_items.map(fi => ({
+      name:          fi.name,
+      x_percent:     (fi.x / W) * 100,
+      y_percent:     (fi.z / L) * 100,
+      width_percent: ((fi.width  || 1) / W) * 100,
+      depth_percent: ((fi.depth  || 1) / L) * 100,
+      rotation:      fi.rotation || 0,
+      color:         fi.color || '#94a3b8',
+    }));
+
+    this.store.setFloorPlan({ room_width: W, room_length: L, furniture_placements: placements });
+  }
+
   ngOnInit() {
     this.sub.add(this.store.floorPlan$.subscribe(data => {
       this.floorPlan = data;
       if (this.ctx) this.draw();
+    }));
+    this.sub.add(this.store.scene3d$.subscribe(data => {
+      this.scene3d = data;
     }));
   }
 

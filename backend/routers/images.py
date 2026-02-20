@@ -19,7 +19,7 @@ async def generate_image(req: ImageGenerationRequest):
 
 @router.post("/generate-from-plan")
 async def generate_from_plan(req: PlanImageGenerationRequest):
-    b64 = await _svc.generate_3d_visualization(req.furniture_items)
+    b64 = await _svc.generate_3d_visualization(req.furniture_items, req.floor_plan_image)
     if not b64:
         from fastapi import HTTPException
         raise HTTPException(status_code=500, detail="3D image generation failed")

@@ -10,3 +10,58 @@
   width: 100%;
   height: 100%;
 }
+
+/* ── Floating toolbar ─────────────────────────────────────────────────────── */
+.fp-toolbar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 10;
+  pointer-events: none;
+
+  > * { pointer-events: auto; }
+}
+
+.fp-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border: none;
+  border-radius: 99px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity .15s, transform .15s, box-shadow .15s;
+
+  &.primary {
+    color: #fff;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    box-shadow: 0 2px 8px rgba(99,102,241,.45);
+
+    &:hover:not(:disabled) {
+      box-shadow: 0 4px 14px rgba(99,102,241,.55);
+      transform: translateY(-1px);
+    }
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+  }
+}
+
+.fp-hint {
+  font-size: 11px;
+  color: #64748b;
+  background: rgba(255,255,255,.88);
+  padding: 4px 10px;
+  border-radius: 99px;
+  backdrop-filter: blur(6px);
+  border: 1px solid #e2e8f0;
+}
