@@ -176,26 +176,38 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
     const t = title.toLowerCase();
 
     const rules: [string[], string][] = [
-      [['king bed', 'king-size bed', 'king size bed'],   'bed-king'],
-      [['queen bed', 'queen-size bed', 'queen size bed'], 'bed-queen'],
-      [['twin bed', 'single bed', 'twin size'],          'bed-single'],
-      [['sectional'],                                    'sectional'],
-      [['sofa', 'couch', 'loveseat', 'chesterfield'],    'sofa'],
-      [['armchair', 'accent chair', 'recliner'],         'armchair'],
-      [['office chair'],                                 'office-chair'],
-      [['dining chair'],                                 'dining-chair'],
-      [['coffee table'],                                 'coffee-table'],
-      [['side table', 'end table'],                      'side-table'],
-      [['nightstand', 'bedside table', 'bedside'],       'nightstand'],
-      [['floor lamp', 'torchiere'],                      'floor-lamp'],
+      // Beds (most specific first)
+      [['king bed', 'king-size bed', 'king size bed'],             'bed-king'],
+      [['queen bed', 'queen-size bed', 'queen size bed'],          'bed-queen'],
+      [['twin bed', 'single bed', 'twin size', 'full bed'],        'bed-single'],
+      [['bed frame', 'platform bed', 'panel bed', 'sleigh bed'],   'bed-queen'],
+      // Sofas / seating
+      [['sectional'],                                              'sectional'],
+      [['sofa', 'couch', 'loveseat', 'chesterfield'],              'sofa'],
+      [['armchair', 'accent chair', 'club chair', 'recliner', 'lounge chair'], 'armchair'],
+      [['office chair', 'task chair', 'desk chair', 'gaming chair'], 'office-chair'],
+      [['dining chair', 'side chair', 'counter stool', 'bar stool'], 'dining-chair'],
+      // Tables
+      [['coffee table', 'cocktail table'],                         'coffee-table'],
+      [['side table', 'end table', 'accent table'],                'side-table'],
+      [['nightstand', 'bedside table', 'bedside', 'night table'],  'nightstand'],
+      [['dining table', 'kitchen table', 'dinner table', 'round table', 'rectangular table'], 'dining-table'],
+      [['desk', 'workstation', 'writing desk', 'computer desk'],   'desk'],
+      // Storage
       [['tv stand', 'tv console', 'media console', 'entertainment center', 'media unit'], 'tv-stand'],
-      [['dining table', 'kitchen table', 'dinner table'], 'dining-table'],
-      [['dresser', 'chest of drawers'],                  'dresser'],
-      [['wardrobe', 'armoire'],                          'wardrobe'],
-      [['bookshelf', 'bookcase', 'shelving unit'],       'bookshelf'],
-      [['desk', 'workstation', 'writing desk'],          'desk'],
-      [['area rug', 'rug', 'carpet'],                    'rug'],
-      [['plant', 'potted'],                              'plant'],
+      [['dresser', 'chest of drawers', 'chest of drawer'],         'dresser'],
+      [['wardrobe', 'armoire', 'closet'],                          'wardrobe'],
+      [['bookshelf', 'bookcase', 'shelving unit', 'shelving', 'shelf'], 'bookshelf'],
+      // Lighting (broad — catches "lamp", "arc lamp", "swing arm lamp" etc.)
+      [['floor lamp', 'torchiere', 'arc lamp', 'swing arm lamp'],  'floor-lamp'],
+      [['lamp', 'light', 'lantern', 'sconce', 'pendant', 'chandelier', 'lighting'], 'floor-lamp'],
+      // Decor
+      [['area rug', 'rug', 'carpet'],                              'rug'],
+      [['plant', 'potted', 'fern', 'tree', 'succulent'],           'plant'],
+      // Generic chair catch-all (after specific chair types)
+      [['chair', 'stool', 'ottoman', 'pouf', 'bench'],             'armchair'],
+      // Generic table catch-all
+      [['table'],                                                   'coffee-table'],
     ];
 
     for (const [keywords, type] of rules) {
@@ -204,14 +216,26 @@ export class Visualization3dComponent implements OnInit, AfterViewInit, OnDestro
       }
     }
 
+    // Category-level fallback
     const c = category.toLowerCase();
-    if (c.includes('sofa') || c.includes('seating')) return FURNITURE_PRESETS.find(p => p.type === 'sofa')!;
+    if (c.includes('sofa') || c.includes('seating') || c.includes('living'))
+      return FURNITURE_PRESETS.find(p => p.type === 'sofa')!;
     if (c.includes('dining'))   return FURNITURE_PRESETS.find(p => p.type === 'dining-table')!;
-    if (c.includes('bed'))      return FURNITURE_PRESETS.find(p => p.type === 'bed-queen')!;
-    if (c.includes('office') || c.includes('desk')) return FURNITURE_PRESETS.find(p => p.type === 'desk')!;
-    if (c.includes('rug'))      return FURNITURE_PRESETS.find(p => p.type === 'rug')!;
+    if (c.includes('bed') || c.includes('bedroom'))
+      return FURNITURE_PRESETS.find(p => p.type === 'bed-queen')!;
+    if (c.includes('office') || c.includes('desk'))
+      return FURNITURE_PRESETS.find(p => p.type === 'desk')!;
+    if (c.includes('rug') || c.includes('carpet'))
+      return FURNITURE_PRESETS.find(p => p.type === 'rug')!;
+    if (c.includes('lamp') || c.includes('light') || c.includes('lighting'))
+      return FURNITURE_PRESETS.find(p => p.type === 'floor-lamp')!;
+    if (c.includes('storage') || c.includes('cabinet') || c.includes('shelf'))
+      return FURNITURE_PRESETS.find(p => p.type === 'bookshelf')!;
+    if (c.includes('decor') || c.includes('accent'))
+      return FURNITURE_PRESETS.find(p => p.type === 'plant')!;
 
-    return FURNITURE_PRESETS[0];
+    // Final fallback: armchair is a safer neutral than sofa
+    return FURNITURE_PRESETS.find(p => p.type === 'armchair')!;
   }
 
   ngOnDestroy() {
