@@ -75,7 +75,7 @@ export interface ChatMessage {
   isStreaming?: boolean;
 }
 
-export type CanvasTab = 'products' | 'plan' | 'assets' | 'floor-plan' | '3d-view' | 'room-images';
+export type CanvasTab = 'products' | 'plan' | 'assets' | 'floor-plan' | '3d-view' | 'room-images' | 'cart';
 
 export type AssetType = 'floor-plan' | 'reference' | 'other';
 
@@ -100,4 +100,10 @@ export interface Plan {
   name: string;
   items: PlanItem[];
   createdAt: Date;
+}
+
+export interface CartItem {
+  id: string;
+  product: Product;
+  quantity: number;
 }

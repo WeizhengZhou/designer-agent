@@ -4,9 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { PlanService } from '../../services/plan.service';
 import { FurnitureStoreService } from '../../services/furniture-store.service';
+import { CartService } from '../../services/cart.service';
 import { Plan, PlanItem, Product, FloorPlanData, Scene3DData, Furniture3DItem, FurniturePlacement } from '../../models';
+import { environment } from '../../../environments/environment';
 
-const PROXY = 'http://localhost:8000/api/images/proxy?url=';
+const PROXY = environment.apiUrl + '/images/proxy?url=';
 
 // Map product category → furniture type + default dimensions (feet)
 interface FurnitureSpec {
@@ -61,6 +63,7 @@ export class PlanPanelComponent implements OnInit, OnDestroy {
   constructor(
     public planService: PlanService,
     private store: FurnitureStoreService,
+    public cartService: CartService
   ) {}
 
   ngOnInit() {
@@ -84,6 +87,16 @@ export class PlanPanelComponent implements OnInit, OnDestroy {
   }
 
   get totalPrice(): number { return this.planService.totalPrice; }
+
+  addToCart(item: PlanItem) {
+    this.cartService.addItem(item.product, item.quantity);
+  }
+
+  addAllToCart() {
+    for (const item of this.plan.items) {
+      this.cartService.addItem(item.product, item.quantity);
+    }
+  }
 
   // ── Visualize as 3D ──────────────────────────────────────────────────────────
   visualize3D() {

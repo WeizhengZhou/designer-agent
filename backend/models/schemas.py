@@ -98,3 +98,7 @@ class PlanFurnitureItem(BaseModel):
 class PlanImageGenerationRequest(BaseModel):
     furniture_items: list[PlanFurnitureItem]
     floor_plan_image: Optional[str] = None  # base64 data URL
+
+class GenerateFloorPlanFrom3dRequest(BaseModel):
+    scene3d: Scene3DData
+    floor_plan_image: str  # base64 data URL

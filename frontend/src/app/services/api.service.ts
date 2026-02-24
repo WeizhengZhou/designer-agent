@@ -195,6 +195,12 @@ export class ApiService implements OnDestroy {
   }
 
 
+  generateFloorPlanFrom3d(scene3d: Scene3DData, floorPlanImage: string) {
+    return this.http.post<any>(`${API_URL}/layout/generate-floor-plan-from-3d`, {
+      scene3d, floor_plan_image: floorPlanImage
+    });
+  }
+
   ngOnDestroy() {
     this.ws?.close();
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);

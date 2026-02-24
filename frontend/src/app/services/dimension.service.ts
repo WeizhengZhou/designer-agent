@@ -13,8 +13,9 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { Product } from '../models';
+import { environment } from '../../environments/environment';
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = environment.apiUrl;
 
 export interface FetchedDimensions {
   width:  number;   // inches

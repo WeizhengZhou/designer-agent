@@ -152,3 +152,103 @@ async def generate_3d_layout(req: GenerateLayoutRequest):
         raise HTTPException(status_code=502, detail=f"Invalid JSON from Gemini: {exc}") from exc
 
     return data
+from models.schemas import GenerateFloorPlanFrom3dRequest
+import base64
+
+FLOOR_PLAN_RESPONSE_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "room_width": {"type": "NUMBER"},
+        "room_length": {"type": "NUMBER"},
+        "furniture_placements": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "name": {"type": "STRING"},
+                    "x_percent": {"type": "NUMBER"},
+                    "y_percent": {"type": "NUMBER"},
+                    "width_percent": {"type": "NUMBER"},
+                    "depth_percent": {"type": "NUMBER"},
+                    "rotation": {"type": "NUMBER"},
+                    "color": {"type": "STRING"},
+                },
+                "required": ["name", "x_percent", "y_percent", "width_percent", "depth_percent", "rotation", "color"],
+            },
+        },
+    },
+    "required": ["room_width", "room_length", "furniture_placements"],
+}
+
+FLOOR_PLAN_PROMPT = """\
+You are an expert interior design and spatial analyst.
+I have provided:
+1. An uploaded image of a room's floor plan.
+2. A list of furniture pieces and their current rough 3D coordinates.
+
+Your task is to analyze the floor plan image, understand its boundaries, doorways, windows, and architectural features, and adjust the provided furniture pieces so they fit perfectly within the actual room shown in the image.
+
+Output the final 2D arrangement.
+The coordinates should be percentage-based relative to the image bounds (0 to 100).
+- x_percent: horizontal position of the piece's center (0 = left wall, 100 = right wall).
+- y_percent: vertical position of the piece's center (0 = top wall, 100 = bottom wall).
+- width_percent: width of the piece relative to the room width.
+- depth_percent: depth of the piece relative to the room height.
+- rotation: rotation in degrees (0, 90, 180, 270).
+
+Original 3D Furniture Items:
+{items}
+"""
+
+@router.post("/generate-floor-plan-from-3d")
+async def generate_floor_plan_from_3d(req: GenerateFloorPlanFrom3dRequest):
+    """Generate a 2D floor plan by overlaying 3D scene data onto an uploaded floor plan image."""
+    
+    # Extract image bytes
+    try:
+        header, b64data = req.floor_plan_image.split(",", 1)
+        mime_type = header.split(":")[1].split(";")[0]
+        image_bytes = base64.b64decode(b64data)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid floor plan image: {e}")
+
+    # Build items list
+    items_desc = []
+    for item in req.scene3d.furniture_items:
+        items_desc.append(
+            f"- {item.name}: approx size {item.width}x{item.depth}, color {item.color}, current rough pos ({item.x}, {item.z})"
+        )
+    
+    prompt = FLOOR_PLAN_PROMPT.format(items="\n".join(items_desc))
+    
+    client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+    
+    # We use the same image model used in the room images generator
+    model_name = "gemini-2.5-flash"
+    
+    contents = [
+        types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+        types.Part.from_text(text=prompt)
+    ]
+    
+    config = types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_schema=FLOOR_PLAN_RESPONSE_SCHEMA,
+    )
+    
+    try:
+        response = await asyncio.to_thread(
+            client.models.generate_content,
+            model=model_name,
+            contents=contents,
+            config=config,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Gemini error: {exc}") from exc
+
+    try:
+        data = json.loads(response.text)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=502, detail=f"Invalid JSON from Gemini: {exc}") from exc
+
+    return data

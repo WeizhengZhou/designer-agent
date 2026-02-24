@@ -3,8 +3,9 @@ import { CommonModule } from '@angular/common';
 import { Product } from '../../models';
 import { PlanService } from '../../services/plan.service';
 import { DimensionService } from '../../services/dimension.service';
+import { environment } from '../../../environments/environment';
 
-const PROXY = 'http://localhost:8000/api/images/proxy?url=';
+const PROXY = environment.apiUrl + '/images/proxy?url=';
 
 @Component({
   selector: 'app-product-card',

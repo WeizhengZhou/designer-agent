@@ -4,6 +4,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { FurnitureStoreService } from '../../services/furniture-store.service';
+import { ApiService } from '../../services/api.service';
 import { FloorPlanData, FurniturePlacement, Scene3DData } from '../../models';
 
 @Component({
@@ -21,31 +22,40 @@ export class FloorPlanComponent implements OnInit, OnDestroy, AfterViewInit {
   private sub = new Subscription();
   private ctx: CanvasRenderingContext2D | null = null;
   private resizeObserver!: ResizeObserver;
+  isGenerating = false;
 
-  constructor(private store: FurnitureStoreService) {}
+  constructor(
+    private store: FurnitureStoreService,
+    private apiService: ApiService
+  ) {}
 
   get hasScene3D(): boolean {
     return !!(this.scene3d && this.scene3d.furniture_items.length > 0);
   }
 
+  get hasFloorPlanAsset(): boolean {
+    return !!this.store.getFloorPlanAsset();
+  }
+
   /** Convert the current 3D scene layout into a floor plan and display it. */
   generateFromScene3D(): void {
     if (!this.scene3d) return;
-    const s = this.scene3d;
-    const W = s.room_width  || 15;
-    const L = s.room_length || 20;
+    const fpAsset = this.store.getFloorPlanAsset();
+    if (!fpAsset) return;
 
-    const placements: FurniturePlacement[] = s.furniture_items.map(fi => ({
-      name:          fi.name,
-      x_percent:     (fi.x / W) * 100,
-      y_percent:     (fi.z / L) * 100,
-      width_percent: ((fi.width  || 1) / W) * 100,
-      depth_percent: ((fi.depth  || 1) / L) * 100,
-      rotation:      fi.rotation || 0,
-      color:         fi.color || '#94a3b8',
-    }));
-
-    this.store.setFloorPlan({ room_width: W, room_length: L, furniture_placements: placements });
+    this.isGenerating = true;
+    this.sub.add(
+      this.apiService.generateFloorPlanFrom3d(this.scene3d, fpAsset.dataUrl).subscribe({
+        next: (res: FloorPlanData) => {
+          this.store.setFloorPlan(res);
+          this.isGenerating = false;
+        },
+        error: (err: any) => {
+          console.error('Failed to generate floor plan from 3D view', err);
+          this.isGenerating = false;
+        }
+      })
+    );
   }
 
   ngOnInit() {

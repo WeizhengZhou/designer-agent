@@ -8,6 +8,9 @@
         @if (tab.id === 'plan' && planItemCount > 0) {
           <span class="tab-badge">{{ planItemCount }}</span>
         }
+        @if (tab.id === 'cart' && cartItemCount > 0) {
+          <span class="tab-badge" style="background: #ef4444;">{{ cartItemCount }}</span>
+        }
         @if (tab.id === 'assets' && uploadedCount > 0) {
           <span class="tab-badge">{{ uploadedCount }}</span>
         }
@@ -23,6 +26,9 @@
       }
       @case ('plan') {
         <app-plan-panel></app-plan-panel>
+      }
+      @case ('cart') {
+        <app-cart-panel></app-cart-panel>
       }
 
       <!-- ── Uploads tab ──────────────────────────────────────────────────── -->

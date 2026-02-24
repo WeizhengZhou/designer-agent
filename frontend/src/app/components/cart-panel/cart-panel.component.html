@@ -1,0 +1,76 @@
+<div class="plan-panel">
+  <!-- Header -->
+  <div class="plan-header">
+    <span class="plan-icon">🛒</span>
+    <span class="plan-name">Shopping Cart</span>
+    @if (items.length > 0) {
+      <button class="clear-btn" (click)="cartService.clearCart()" title="Empty cart">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+        </svg>
+        Empty
+      </button>
+    }
+  </div>
+
+  <!-- Empty state -->
+  @if (items.length === 0) {
+    <div class="plan-empty">
+      <div class="empty-icon">🛒</div>
+      <h3>Your cart is empty</h3>
+      <p>Add items from your Plan to the cart when you're ready to checkout.</p>
+    </div>
+  } @else {
+
+    <!-- Item list -->
+    <div class="plan-items">
+      @for (item of items; track item.id) {
+        <div class="plan-item">
+          <img class="item-thumb" [src]="thumbSrc(item.product)" [alt]="item.product.title" />
+
+          <div class="item-info">
+            <p class="item-title">{{ item.product.title }}</p>
+            <p class="item-meta">{{ item.product.category }} · {{ item.product.seller }}</p>
+            @if (item.product.price > 0) {
+              <p class="item-price">${{ item.product.price | number:'1.0-0' }} each</p>
+            }
+          </div>
+
+          <div class="item-controls">
+            <button class="qty-btn" (click)="updateQty(item.product.id, -1)">−</button>
+            <span class="qty-val">{{ item.quantity }}</span>
+            <button class="qty-btn" (click)="updateQty(item.product.id, 1)">+</button>
+            <button class="remove-btn" (click)="removeItem(item.product.id)" title="Remove">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Summary -->
+    <div class="plan-summary">
+      <div class="summary-row">
+        <span class="summary-label">{{ cartService.itemCount }} items</span>
+        @if (cartService.totalPrice > 0) {
+          <span class="summary-total">Total: ${{ cartService.totalPrice | number:'1.0-2' }}</span>
+        }
+      </div>
+    </div>
+
+    <!-- Visualization actions (Checkout in this case) -->
+    <div class="viz-actions">
+      <button class="viz-btn" (click)="checkout()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="9" cy="21" r="1"></circle>
+          <circle cx="20" cy="21" r="1"></circle>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+        </svg>
+        Checkout
+      </button>
+    </div>
+
+  }
+</div>

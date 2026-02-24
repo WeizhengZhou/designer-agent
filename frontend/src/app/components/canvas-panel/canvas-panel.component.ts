@@ -10,6 +10,8 @@ import { Visualization3dComponent } from '../visualization-3d/visualization-3d.c
 import { ProductDetailPanelComponent } from '../product-detail-panel/product-detail-panel.component';
 import { ApiService } from '../../services/api.service';
 import { PlanPanelComponent } from '../plan-panel/plan-panel.component';
+import { CartPanelComponent } from '../cart-panel/cart-panel.component';
+import { CartService } from '../../services/cart.service';
 
 interface Tab { id: CanvasTab; label: string; icon: string }
 
@@ -23,6 +25,7 @@ interface Tab { id: CanvasTab; label: string; icon: string }
     Visualization3dComponent,
     ProductDetailPanelComponent,
     PlanPanelComponent,
+    CartPanelComponent,
   ],
   templateUrl: './canvas-panel.component.html',
   styleUrls: ['./canvas-panel.component.scss'],
@@ -34,6 +37,7 @@ export class CanvasPanelComponent implements OnInit, OnDestroy {
   uploadedAssets: UploadedAsset[] = [];
   lightboxIndex: number | null = null;
   planItemCount = 0;
+  cartItemCount = 0;
   isGenerating = false;
   private sub = new Subscription();
 
@@ -44,11 +48,13 @@ export class CanvasPanelComponent implements OnInit, OnDestroy {
     { id: 'floor-plan',  label: 'Floor Plan',  icon: '📐' },
     { id: '3d-view',     label: '3D View',     icon: '🏠' },
     { id: 'room-images', label: 'Room Images', icon: '🖼️' },
+    { id: 'cart',        label: 'Cart',        icon: '🛒' },
   ];
 
   constructor(
     public store: FurnitureStoreService,
     public planService: PlanService,
+    public cartService: CartService,
     private apiService: ApiService,
   ) {}
 
@@ -59,6 +65,9 @@ export class CanvasPanelComponent implements OnInit, OnDestroy {
     this.sub.add(this.store.uploadedAssets$.subscribe(a => (this.uploadedAssets = a)));
     this.sub.add(this.planService.plan$.subscribe(p => {
       this.planItemCount = p.items.reduce((sum, i) => sum + i.quantity, 0);
+    }));
+    this.sub.add(this.cartService.items$.subscribe(items => {
+      this.cartItemCount = items.reduce((sum, i) => sum + i.quantity, 0);
     }));
   }
 

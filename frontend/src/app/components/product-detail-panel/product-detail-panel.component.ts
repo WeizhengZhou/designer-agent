@@ -3,8 +3,9 @@ import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { FurnitureStoreService } from '../../services/furniture-store.service';
 import { Product } from '../../models';
+import { environment } from '../../../environments/environment';
 
-const PROXY = 'http://localhost:8000/api/images/proxy?url=';
+const PROXY = environment.apiUrl + '/images/proxy?url=';
 
 @Component({
   selector: 'app-product-detail-panel',
